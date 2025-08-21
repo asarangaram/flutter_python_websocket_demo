@@ -30,7 +30,7 @@ class _WebSocketPageState extends State<WebSocketPage> {
   // Use your computer's IP address. For Android emulator, use 10.0.2.2.
   // For iOS simulator or physical device, find your computer's local IP.
   // Example: 'ws://192.168.1.100:5000/socket.io/?EIO=4&transport=websocket'
-  final String _serverIp = '127.0.0.1';
+  final String _serverIp = '192.168.0.179';
   final String _serverPort = '5002';
 
   // The 'io' transport is required for Socket.IO compatibility
