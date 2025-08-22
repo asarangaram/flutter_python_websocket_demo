@@ -56,7 +56,7 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
   void disconnectFromServer() {
     if (socket != null) {
       socket?.disconnect();
-      socket!.dispose(); // cleans up listeners
+      socket?.dispose(); // cleans up listeners
       socket = null;
     }
   }
