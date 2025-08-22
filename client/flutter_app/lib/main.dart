@@ -1,82 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'providers/server_io.dart';
+
+// The provider and notifier class from the previous step go here.
 
 void main() {
-  runApp(const WebSocketDemo());
+  runApp(const ProviderScope(child: WebSocketDemo()));
 }
 
-class WebSocketDemo extends StatefulWidget {
+class WebSocketDemo extends ConsumerStatefulWidget {
   const WebSocketDemo({super.key});
 
   @override
-  State<WebSocketDemo> createState() => _WebSocketDemoState();
+  ConsumerState<WebSocketDemo> createState() => _WebSocketDemoState();
 }
 
-class _WebSocketDemoState extends State<WebSocketDemo> {
-  IO.Socket? socket;
-  final List<String> messages = [];
-  bool connected = false;
+class _WebSocketDemoState extends ConsumerState<WebSocketDemo> {
   final ScrollController _scrollController = ScrollController();
 
-  void connectToServer() {
-    if (socket != null) {
-      socket!.dispose(); // cleans up listeners
-      socket = null;
-    }
-    socket = IO.io("http://192.168.0.179:5002", <String, dynamic>{
-      "transports": ["websocket"],
-      "autoConnect": false,
-    });
-
-    socket!.connect();
-
-    socket!.onConnect((_) {
-      setState(() => connected = true);
-      addMessage("✅ Connected to server");
-    });
-
-    socket!.on("message", (data) {
-      final msg = data["msg"];
-      addMessage("📩 $msg");
-
-      if (msg == "done") {
-        addMessage("Process finished!");
-      }
-    });
-
-    socket!.onDisconnect((_) {
-      setState(() => connected = false);
-      addMessage("❌ Disconnected");
-      addMessage("@Divider");
-      socket!.dispose(); // cleans up listeners
-      socket = null;
-    });
-  }
-
-  void disconnectFromServer() {
-    if (socket != null) {
-      socket?.disconnect();
-      socket?.dispose(); // cleans up listeners
-      socket = null;
-    }
-  }
-
-  void sendProcess() {
-    if (socket != null && connected) {
-      socket!.emit("message", "process");
-      addMessage("▶ Sent 'process' to server");
-    }
-  }
-
-  void addMessage(String msg) {
-    setState(() {
-      messages.add(msg);
-    });
-
-    // Auto-scroll to the bottom
+  // Helper method to auto-scroll
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        // _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -87,7 +33,21 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Listen for state changes and scroll
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen(serverIOProvider, (_, __) {
+      _scrollToBottom();
+    });
+    // Watch the provider's state
+    final asyncMessages = ref.watch(serverIOProvider);
+    final notifier = ref.read(serverIOProvider.notifier);
+    final connected = notifier.connected;
+
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(title: const Text("WebSocket Demo")),
@@ -97,12 +57,14 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                  onPressed: connected ? disconnectFromServer : connectToServer,
+                  onPressed: connected
+                      ? notifier.disconnectFromServer
+                      : notifier.connectToServer,
                   child: Text(connected ? "Disconnect" : "Connect"),
                 ),
                 const SizedBox(width: 20),
                 ElevatedButton(
-                  onPressed: connected ? sendProcess : null,
+                  onPressed: connected ? notifier.sendProcess : null,
                   child: const Text("Send Process"),
                 ),
               ],
@@ -112,19 +74,26 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 color: Colors.black87,
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    if (messages[index] == "@Divider") {
-                      return Divider(
-                        thickness: 2, // line thickness
-                        color: Colors.grey,
-                      );
-                    }
-                    return Text(
-                      messages[index],
-                      style: const TextStyle(color: Colors.white),
+                child: asyncMessages.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => Center(child: Text("Error: $err")),
+                  data: (messages) {
+                    return ListView.builder(
+                      controller: _scrollController,
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        if (messages[index] == "@Divider") {
+                          return const Divider(
+                            thickness: 2,
+                            color: Colors.grey,
+                          );
+                        }
+                        return Text(
+                          messages[index],
+                          style: const TextStyle(color: Colors.white),
+                        );
+                      },
                     );
                   },
                 ),
