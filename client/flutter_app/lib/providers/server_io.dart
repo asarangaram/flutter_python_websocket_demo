@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 final serverIOProvider = AsyncNotifierProvider<ServerIONotifier, List<String>>(
@@ -43,10 +44,12 @@ class ServerIONotifier extends AsyncNotifier<List<String>> {
       addMessage('Connection error: $err'.error);
       // Here you can trigger "Server offline" UI
     });
+    /*
     _socket!.onError((err) {
       addMessage(' error: $err'.error);
       // Show "Server not available"
     });
+    */
 
     _socket!.on("message", (data) {
       final msg = data["msg"];
@@ -108,7 +111,8 @@ extension Timestamp on String {
   }
 
   String get withTimestamp {
-    final now = DateTime.now().toIso8601String();
-    return "[$now] : $this";
+    final now = DateTime.now();
+    final formatted = DateFormat("yyyy-MMM-dd HH:mm:ss.SSS").format(now);
+    return "[$formatted] : $this";
   }
 }
