@@ -1,22 +1,27 @@
 import socketio
 
+# Create a Socket.IO client
 sio = socketio.Client()
 
-@sio.on("connect")
-def on_connect():
-    print("Connected to server")
+@sio.event
+def connect():
+    print("✅ Connected to server")
+    # Send 'process' immediately after connecting
+    sio.emit("message", "process")
 
-@sio.on("message")
-def on_message(data):
-    msg = data["msg"]
-    print("Message from server:", msg)
-    if msg == "close_connection":
-        print("Server asked to close connection. Disconnecting...")
+@sio.event
+def message(data):
+    msg = data.get("msg", "")
+    print(f"📩 {msg}")
+    if msg == "done":
+        print("Process completed, disconnecting...")
         sio.disconnect()
 
-@sio.on("disconnect")
-def on_disconnect():
-    print("Disconnected from server")
+@sio.event
+def disconnect():
+    print("❌ Disconnected from server")
 
-sio.connect("http://localhost:5002")
-sio.wait()  # Wait for server messages
+if __name__ == "__main__":
+    # Connect to your Flask-SocketIO server
+    sio.connect("http://localhost:5002", transports=["websocket"])  # Force websocket, no polling
+    sio.wait()
