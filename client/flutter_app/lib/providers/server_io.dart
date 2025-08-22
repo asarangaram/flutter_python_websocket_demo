@@ -1,31 +1,22 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
-final serverIOProvider = AsyncNotifierProvider<ServerIONotifier, List<String>>(
+import '../models/server_io.dart';
+
+final serverIOProvider = AsyncNotifierProvider<ServerIONotifier, ServerIO>(
   ServerIONotifier.new,
 );
 
-class ServerIONotifier extends AsyncNotifier<List<String>> {
-  io.Socket? _socket;
-  bool _connected = false;
-  final List<String> _messages = [];
-
+class ServerIONotifier extends AsyncNotifier<ServerIO> {
   @override
-  Future<List<String>> build() async {
-    return _messages;
+  Future<ServerIO> build() async {
+    return ServerIO();
   }
 
-  bool get connected => _connected;
-
-  void connectToServer() {
-    if (_socket != null) {
-      _socket!.dispose();
-      _socket = null;
-    }
-
-    _socket = io.io(
+  void connect() {
+    state = AsyncData(state.value!.dispose());
+    final socket = io.io(
       "http://192.168.0.179:5002",
       io.OptionBuilder()
           .setTransports(['websocket'])
@@ -34,15 +25,15 @@ class ServerIONotifier extends AsyncNotifier<List<String>> {
           .build(),
     );
 
-    _socket!.connect();
+    socket.connect();
+    state = AsyncData(state.value!.copyWith(socket: () => socket));
 
-    _socket!.onConnect((_) {
-      _connected = true;
+    socket.onConnect((_) {
+      state = AsyncData(state.value!.copyWith(connected: true));
       addMessage("Connected to server".info);
     });
-    _socket!.onConnectError((err) {
+    socket.onConnectError((err) {
       addMessage('Connection error: $err'.error);
-      // Here you can trigger "Server offline" UI
     });
     /*
     _socket!.onError((err) {
@@ -51,7 +42,7 @@ class ServerIONotifier extends AsyncNotifier<List<String>> {
     });
     */
 
-    _socket!.on("message", (data) {
+    socket.on("message", (data) {
       final msg = data["msg"];
       addMessage("$msg".info);
 
@@ -60,27 +51,20 @@ class ServerIONotifier extends AsyncNotifier<List<String>> {
       }
     });
 
-    _socket!.onDisconnect((_) {
-      _connected = false;
+    socket.onDisconnect((_) {
+      state = AsyncData(state.value!.dispose());
       addMessage("Disconnected".info);
       addMessage("@Divider");
-      _socket!.dispose();
-      _socket = null;
     });
   }
 
   void disconnectFromServer() {
-    if (_socket != null) {
-      _socket?.disconnect();
-      _socket?.dispose();
-      _connected = false;
-      _socket = null;
-    }
+    state.value!.socket?.disconnect();
+    state = AsyncData(state.value!.dispose());
   }
 
   void sendProcess() {
-    if (_socket != null && _connected) {
-      _socket!.emit("message", "process");
+    if (state.value!.sendMessage("process")) {
       addMessage("Sent 'process' to server".info);
     }
   }
@@ -91,9 +75,7 @@ class ServerIONotifier extends AsyncNotifier<List<String>> {
   }
 
   void addMessage(String msg) {
-    _messages.add(msg);
-    // Update the state to notify listeners
-    state = AsyncData([..._messages]);
+    state = AsyncData(state.value!.addMessage(msg));
   }
 }
 
