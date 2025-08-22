@@ -3,7 +3,13 @@ from flask import Flask, request
 from flask_socketio import SocketIO
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    ping_interval=25,   # server pings every 25s
+    ping_timeout=60*10     # disconnect if no pong in 60s
+)
+
 
 @app.route("/")
 def home():
@@ -19,10 +25,10 @@ def send_messages(sid):
     for i in range(1, 11):  # 10 seconds
         socketio.emit("message", {"msg": f"Tick {i}"}, to=sid)
         time.sleep(1)
-    # Send final message before disconnect
+    
     socketio.emit("message", {"msg": "close_connection"}, to=sid)
     # server initiates disconnect
-    socketio.disconnect(sid)
+    socketio.server.disconnect(sid)
 
 @socketio.on("disconnect")
 def handle_disconnect():
