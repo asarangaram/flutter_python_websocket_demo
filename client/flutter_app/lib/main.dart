@@ -47,7 +47,7 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
     socket!.onDisconnect((_) {
       setState(() => connected = false);
       addMessage("❌ Disconnected");
-      addMessage("________");
+      addMessage("@Divider");
       socket!.dispose(); // cleans up listeners
       socket = null;
     });
@@ -116,6 +116,12 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
                   controller: _scrollController,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
+                    if (messages[index] == "@Divider") {
+                      return Divider(
+                        thickness: 2, // line thickness
+                        color: Colors.grey,
+                      );
+                    }
                     return Text(
                       messages[index],
                       style: const TextStyle(color: Colors.white),
