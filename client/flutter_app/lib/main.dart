@@ -16,7 +16,6 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
   IO.Socket? socket;
   final List<String> messages = [];
   bool connected = false;
-
   final ScrollController _scrollController = ScrollController();
 
   void connectToServer() {
@@ -34,17 +33,14 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
     socket!.onConnect((_) {
       setState(() => connected = true);
       addMessage("✅ Connected to server");
-      socket!.emit("message", "Hello from Flutter!");
     });
 
     socket!.on("message", (data) {
       final msg = data["msg"];
       addMessage("📩 $msg");
-      print(msg);
 
-      if (msg == "close_connection") {
-        print("Closing connection as instructed by server...");
-        socket!.disconnect();
+      if (msg == "done") {
+        addMessage("Process finished!");
       }
     });
 
@@ -52,16 +48,35 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
       setState(() => connected = false);
       addMessage("❌ Disconnected");
       addMessage("________");
-      addMessage(" ");
+      socket!.dispose(); // cleans up listeners
+      socket = null;
     });
+  }
+
+  void disconnectFromServer() {
+    if (socket != null) {
+      socket?.disconnect();
+      socket!.dispose(); // cleans up listeners
+      socket = null;
+    }
+  }
+
+  void sendProcess() {
+    if (socket != null && connected) {
+      socket!.emit("message", "process");
+      addMessage("▶ Sent 'process' to server");
+    }
   }
 
   void addMessage(String msg) {
     setState(() {
       messages.add(msg);
     });
+
+    // Auto-scroll to the bottom
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
+        // _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -78,9 +93,19 @@ class _WebSocketDemoState extends State<WebSocketDemo> {
         appBar: AppBar(title: const Text("WebSocket Demo")),
         body: Column(
           children: [
-            ElevatedButton(
-              onPressed: connected ? null : connectToServer,
-              child: Text(connected ? "Connected" : "Connect"),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: connected ? disconnectFromServer : connectToServer,
+                  child: Text(connected ? "Disconnect" : "Connect"),
+                ),
+                const SizedBox(width: 20),
+                ElevatedButton(
+                  onPressed: connected ? sendProcess : null,
+                  child: const Text("Send Process"),
+                ),
+              ],
             ),
             const Divider(),
             Expanded(
