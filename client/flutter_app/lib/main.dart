@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'providers/server_io.dart';
 
@@ -91,7 +92,10 @@ class _WebSocketDemoState extends ConsumerState<WebSocketDemo> {
                         }
                         return Text(
                           messages[index],
-                          style: const TextStyle(color: Colors.white),
+                          style: GoogleFonts.robotoMono(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
                         );
                       },
                     );
