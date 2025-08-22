@@ -9,7 +9,7 @@ void main() {
 
   // Connect event
   socket.onConnect((_) {
-    print("✅ Connected to server");
+    print("Connected to server");
 
     // Immediately send "process"
     socket.emit("message", "process");
@@ -19,7 +19,7 @@ void main() {
   // Listen for messages
   socket.on("message", (data) {
     final msg = data["msg"];
-    print("📩 $msg");
+    print("$msg");
 
     if (msg == "done") {
       print("Process completed, disconnecting...");
@@ -29,7 +29,7 @@ void main() {
 
   // Disconnect event
   socket.onDisconnect((_) {
-    print("❌ Disconnected from server");
+    print("Disconnected from server");
   });
 
   // Connect to the server
